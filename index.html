@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#4285f4">
+    <meta name="description" content="Google Drive File Manager PWA">
+    <title>Drive Manager PWA</title>
+    <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIkRyaXZlIE1hbmFnZXIgUFdBIiwKICAic2hvcnRfbmFtZSI6ICJEcml2ZU1nciIsCiAgInN0YXJ0X3VybCI6ICIuLyIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiI2ZmZmZmZiIsCiAgInRoZW1lX2NvbG9yIjogIiM0Mjg1ZjQiLAogICJpY29ucyI6IFtdCn0=">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📁</text></svg>">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #4285f4;
+            --primary-dark: #3367d6;
+            --success: #34a853;
+            --warning: #fbbc04;
+            --danger: #ea4335;
+            --bg: #f8f9fa;
+            --surface: #ffffff;
+            --text: #202124;
+            --text-secondary: #5f6368;
+            --border: #dadce0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+            font-size: 0.9rem;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(255,255,255,0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(66, 133, 244, 0.4);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #2d8e47;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--surface);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .card h2 {
+            margin-bottom: 20px;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .auth-section {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .auth-section p {
+            margin-bottom: 20px;
+            color: var(--text-secondary);
+        }
+
+        .file-browser {
+            display: none;
+        }
+
+        .file-browser.active {
+            display: block;
+        }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            padding: 10px 15px;
+            background: var(--bg);
+            border-radius: 8px;
+        }
+
+        .breadcrumb-item {
+            color: var(--primary);
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            background: rgba(66, 133, 244, 0.1);
+        }
+
+        .breadcrumb-separator {
+            color: var(--text-secondary);
+        }
+
+        .breadcrumb-current {
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .actions-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .file-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .file-item {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .file-item:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+
+        .file-item.folder {
+            background: linear-gradient(135deg, #fff9e6, #fff);
+        }
+
+        .file-icon {
+            font-size: 3rem;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .file-name {
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-align: center;
+            word-break: break-word;
+            line-height: 1.3;
+            max-height: 2.6em;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .file-meta {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-align: center;
+            margin-top: 8px;
+        }
+
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            background: var(--bg);
+            margin-bottom: 20px;
+        }
+
+        .upload-zone.dragover {
+            border-color: var(--primary);
+            background: rgba(66, 133, 244, 0.05);
+            transform: scale(1.02);
+        }
+
+        .upload-zone i {
+            font-size: 3rem;
+            color: var(--primary);
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .upload-zone p {
+            color: var(--text-secondary);
+            margin-bottom: 15px;
+        }
+
+        .progress-container {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .progress-container.active {
+            display: block;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--success));
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .speed-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 10px;
+            background: var(--success);
+            color: white;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--surface);
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 400px;
+            width: 90%;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-content h3 {
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--text);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 2000;
+        }
+
+        .toast.active {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast.success {
+            background: var(--success);
+        }
+
+        .toast.error {
+            background: var(--danger);
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.5rem;
+            }
+
+            .file-list {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+
+            .actions-bar {
+                flex-direction: column;
+            }
+
+            .actions-bar .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        #installBtn {
+            display: none;
+        }
+
+        .network-stats {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .stat-box {
+            background: rgba(255,255,255,0.15);
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+
+        .stat-label {
+            opacity: 0.9;
+        }
+
+        .stat-value {
+            font-weight: 600;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>📁 Drive Manager PWA</h1>
+        <div class="status-bar">
+            <div class="status-item" id="authStatus">
+                <span>🔒</span>
+                <span id="authText">Not Connected</span>
+            </div>
+            <div class="status-item">
+                <span>🌐</span>
+                <span id="networkStatus">Online</span>
+            </div>
+        </div>
+        <div class="network-stats">
+            <div class="stat-box">
+                <span class="stat-label">Speed:</span>
+                <span class="stat-value" id="uploadSpeed">0 KB/s</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">Progress:</span>
+                <span class="stat-value" id="uploadProgress">0%</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Auth Section -->
+        <div class="card auth-section" id="authSection">
+            <h2>🔐 Connect to Google Drive</h2>
+            <p>Sign in with your Google account to manage files in the shared drive folder</p>
+            <button class="btn btn-primary" onclick="handleAuth()">
+                <span>🔑</span> Sign in with Google
+            </button>
+            <button class="btn btn-secondary" id="installBtn" onclick="installPWA()">
+                <span>📲</span> Install App
+            </button>
+        </div>
+
+        <!-- File Browser Section -->
+        <div class="file-browser" id="fileBrowser">
+            <div class="card">
+                <div class="breadcrumb" id="breadcrumb">
+                    <!-- Breadcrumb items will be inserted here -->
+                </div>
+
+                <div class="actions-bar">
+                    <button class="btn btn-primary" onclick="showCreateFolderModal()">
+                        <span>📁</span> New Folder
+                    </button>
+                    <button class="btn btn-success" onclick="document.getElementById('fileInput').click()">
+                        <span>⬆️</span> Upload Files
+                    </button>
+                    <input type="file" id="fileInput" multiple style="display: none;" onchange="handleFileSelect(event)">
+                    <button class="btn btn-secondary" onclick="refreshCurrentFolder()">
+                        <span>🔄</span> Refresh
+                    </button>
+                    <button class="btn btn-danger" onclick="logout()" style="margin-left: auto;">
+                        <span>🚪</span> Logout
+                    </button>
+                </div>
+
+                <div class="upload-zone" id="uploadZone">
+                    <i>☁️</i>
+                    <p><strong>Drag & drop files here</strong> or click "Upload Files" button</p>
+                    <p style="font-size: 0.85rem;">Supported: All file types • Max size: 5TB (Google Drive limit)</p>
+                </div>
+
+                <div class="progress-container" id="progressContainer">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-info">
+                        <span id="progressText">Uploading...</span>
+                        <span id="progressPercent">0%</span>
+                    </div>
+                    <div style="text-align: center; margin-top: 10px;">
+                        <span class="speed-indicator">
+                            <span>⚡</span>
+                            <span id="speedDisplay">0 KB/s</span>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="file-list" id="fileList">
+                    <!-- Files will be inserted here -->
+                </div>
+
+                <div class="empty-state" id="emptyState" style="display: none;">
+                    <i>📂</i>
+                    <h3>This folder is empty</h3>
+                    <p>Upload files or create a new folder to get started</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Folder Modal -->
+    <div class="modal" id="folderModal">
+        <div class="modal-content">
+            <h3>📁 Create New Folder</h3>
+            <div class="form-group">
+                <label for="folderName">Folder Name</label>
+                <input type="text" id="folderName" placeholder="Enter folder name..." onkeypress="if(event.key==='Enter')createFolder()">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('folderModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="createFolder()">Create Folder</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // Configuration
+        const CONFIG = {
+            CLIENT_ID: '879240149021-tkgkrq505ps17c0q400m5een4r7o7mfv.apps.googleusercontent.com',
+            API_KEY: 'AIzaSyDaj7PWa7M_lhBQoHA1X3RzZE6-2b3fdMs',
+            ROOT_FOLDER_ID: '1MJ7_PugrHBD3Ej3qug1R6cpQXIIGtd1X',
+            SCOPES: 'https://www.googleapis.com/auth/drive.file'
+        };
+
+        // State
+        let state = {
+            accessToken: null,
+            currentFolderId: CONFIG.ROOT_FOLDER_ID,
+            folderPath: [{ id: CONFIG.ROOT_FOLDER_ID, name: 'Root' }],
+            isUploading: false,
+            deferredPrompt: null
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSession();
+            setupDragDrop();
+            checkNetworkStatus();
+            setupServiceWorker();
+        });
+
+        // Session Management
+        function loadSession() {
+            const session = localStorage.getItem('driveSession');
+            if (session) {
+                try {
+                    const data = JSON.parse(session);
+                    if (data.accessToken && new Date(data.expiresAt) > new Date()) {
+                        state.accessToken = data.accessToken;
+                        state.currentFolderId = data.currentFolderId || CONFIG.ROOT_FOLDER_ID;
+                        state.folderPath = data.folderPath || [{ id: CONFIG.ROOT_FOLDER_ID, name: 'Root' }];
+                        showAuthenticatedUI();
+                        loadFolderContents(state.currentFolderId);
+                    } else {
+                        localStorage.removeItem('driveSession');
+                    }
+                } catch (e) {
+                    localStorage.removeItem('driveSession');
+                }
+            }
+        }
+
+        function saveSession() {
+            const session = {
+                accessToken: state.accessToken,
+                expiresAt: new Date(Date.now() + 3600000).toISOString(),
+                currentFolderId: state.currentFolderId,
+                folderPath: state.folderPath
+            };
+            localStorage.setItem('driveSession', JSON.stringify(session));
+        }
+
+        // Authentication
+        async function handleAuth() {
+            try {
+                showToast('Redirecting to Google...', 'info');
+                
+                // Use OAuth2 implicit flow
+                const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${CONFIG.CLIENT_ID}&redirect_uri=${encodeURIComponent(window.location.origin)}&response_type=token&scope=${encodeURIComponent(CONFIG.SCOPES)}&access_type=offline&prompt=consent`;
+                
+                // Check if we're returning from auth
+                const hash = window.location.hash;
+                if (hash && hash.includes('access_token')) {
+                    const params = new URLSearchParams(hash.substring(1));
+                    const accessToken = params.get('access_token');
+                    
+                    if (accessToken) {
+                        state.accessToken = accessToken;
+                        // Clean up URL
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                        saveSession();
+                        showAuthenticatedUI();
+                        await loadFolderContents(state.currentFolderId);
+                        showToast('Successfully connected!', 'success');
+                    }
+                } else {
+                    window.location.href = authUrl;
+                }
+            } catch (error) {
+                console.error('Auth error:', error);
+                showToast('Authentication failed. Please try again.', 'error');
+            }
+        }
+
+        function showAuthenticatedUI() {
+            document.getElementById('authSection').style.display = 'none';
+            document.getElementById('fileBrowser').classList.add('active');
+            document.getElementById('authText').textContent = 'Connected';
+            document.querySelector('#authStatus span:first-child').textContent = '✅';
+            updateBreadcrumb();
+        }
+
+        function logout() {
+            state.accessToken = null;
+            state.currentFolderId = CONFIG.ROOT_FOLDER_ID;
+            state.folderPath = [{ id: CONFIG.ROOT_FOLDER_ID, name: 'Root' }];
+            localStorage.removeItem('driveSession');
+            
+            document.getElementById('authSection').style.display = 'block';
+            document.getElementById('fileBrowser').classList.remove('active');
+            document.getElementById('authText').textContent = 'Not Connected';
+            document.querySelector('#authStatus span:first-child').textContent = '🔒';
+            
+            showToast('Logged out successfully', 'success');
+        }
+
+        // Google Drive API Calls
+        async function loadFolderContents(folderId) {
+            try {
+                const fileList = document.getElementById('fileList');
+                fileList.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px;"><div class="loading" style="border-color: var(--primary); border-top-color: transparent; width: 40px; height: 40px;"></div><p style="margin-top: 15px;">Loading...</p></div>';
+                
+                const query = `'${folderId}' in parents and trashed = false`;
+                const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,mimeType,size,modifiedTime,thumbnailLink)&orderBy=folder,name`;
+                
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${state.accessToken}`,
+                        'X-Goog-Api-Key': CONFIG.API_KEY
+                    }
+                });
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        logout();
+                        throw new Error('Session expired');
+                    }
+                    throw new Error('Failed to load folder contents');
+                }
+                
+                const data = await response.json();
+                renderFileList(data.files || []);
+                
+            } catch (error) {
+                console.error('Error loading folder:', error);
+                showToast(error.message, 'error');
+                document.getElementById('fileList').innerHTML = '';
+                document.getElementById('emptyState').style.display = 'block';
+            }
+        }
+
+        function renderFileList(files) {
+            const fileList = document.getElementById('fileList');
+            const emptyState = document.getElementById('emptyState');
+            
+            if (!files || files.length === 0) {
+                fileList.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            fileList.innerHTML = files.map(file => {
+                const isFolder = file.mimeType === 'application/vnd.google-apps.folder';
+                const icon = getFileIcon(file.mimeType);
+                const size = isFolder ? 'Folder' : formatFileSize(file.size);
+                const modified = formatDate(file.modifiedTime);
+                
+                return `
+                    <div class="file-item ${isFolder ? 'folder' : ''}" 
+                         onclick="${isFolder ? `navigateToFolder('${file.id}', '${file.name}')` : `downloadFile('${file.id}', '${file.name}')`}">
+                        <div class="file-icon">${icon}</div>
+                        <div class="file-name">${escapeHtml(file.name)}</div>
+                        <div class="file-meta">${size} • ${modified}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getFileIcon(mimeType) {
+            if (mimeType === 'application/vnd.google-apps.folder') return '📁';
+            if (mimeType.includes('image')) return '🖼️';
+            if (mimeType.includes('video')) return '🎬';
+            if (mimeType.includes('audio')) return '🎵';
+            if (mimeType.includes('pdf')) return '📄';
+            if (mimeType.includes('word') || mimeType.includes('document')) return '📝';
+            if (mimeType.includes('spreadsheet')) return '📊';
+            if (mimeType.includes('presentation')) return '📽️';
+            if (mimeType.includes('zip') || mimeType.includes('archive')) return '📦';
+            return '📄';
+        }
+
+        function formatFileSize(bytes) {
+            if (!bytes) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diff = now - date;
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            
+            if (days === 0) return 'Today';
+            if (days === 1) return 'Yesterday';
+            if (days < 7) return `${days} days ago`;
+            if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
+            if (days < 365) return `${Math.floor(days / 30)} months ago`;
+            return `${Math.floor(days / 365)} years ago`;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Navigation
+        function navigateToFolder(folderId, folderName) {
+            state.currentFolderId = folderId;
+            state.folderPath.push({ id: folderId, name: folderName });
+            saveSession();
+            updateBreadcrumb();
+            loadFolderContents(folderId);
+        }
+
+        function navigateToParent() {
+            if (state.folderPath.length > 1) {
+                state.folderPath.pop();
+                const parent = state.folderPath[state.folderPath.length - 1];
+                state.currentFolderId = parent.id;
+                saveSession();
+                updateBreadcrumb();
+                loadFolderContents(parent.id);
+            }
+        }
+
+        function updateBreadcrumb() {
+            const breadcrumb = document.getElementById('breadcrumb');
+            breadcrumb.innerHTML = state.folderPath.map((item, index) => {
+                if (index === state.folderPath.length - 1) {
+                    return `<span class="breadcrumb-item breadcrumb-current">📁 ${escapeHtml(item.name)}</span>`;
+                }
+                return `
+                    <span class="breadcrumb-item" onclick="navigateToBreadcrumb(${index})">📁 ${escapeHtml(item.name)}</span>
+                    ${index < state.folderPath.length - 1 ? '<span class="breadcrumb-separator">›</span>' : ''}
+                `;
+            }).join('');
+            
+            // Add parent navigation if not at root
+            if (state.folderPath.length > 1) {
+                const parentBtn = document.createElement('span');
+                parentBtn.className = 'breadcrumb-item';
+                parentBtn.innerHTML = '⬅️';
+                parentBtn.onclick = navigateToParent;
+                breadcrumb.insertBefore(parentBtn, breadcrumb.firstChild);
+            }
+        }
+
+        function navigateToBreadcrumb(index) {
+            const item = state.folderPath[index];
+            state.currentFolderId = item.id;
+            state.folderPath = state.folderPath.slice(0, index + 1);
+            saveSession();
+            updateBreadcrumb();
+            loadFolderContents(item.id);
+        }
+
+        function refreshCurrentFolder() {
+            loadFolderContents(state.currentFolderId);
+            showToast('Refreshed', 'success');
+        }
+
+        // Folder Creation
+        function showCreateFolderModal() {
+            document.getElementById('folderName').value = '';
+            document.getElementById('folderModal').classList.add('active');
+            document.getElementById('folderName').focus();
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        async function createFolder() {
+            const name = document.getElementById('folderName').value.trim();
+            if (!name) {
+                showToast('Please enter a folder name', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('https://www.googleapis.com/drive/v3/files', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${state.accessToken}`,
+                        'X-Goog-Api-Key': CONFIG.API_KEY,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        mimeType: 'application/vnd.google-apps.folder',
+                        parents: [state.currentFolderId]
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to create folder');
+                }
+                
+                closeModal('folderModal');
+                await loadFolderContents(state.currentFolderId);
+                showToast('Folder created successfully!', 'success');
+                
+            } catch (error) {
+                console.error('Error creating folder:', error);
+                showToast(error.message, 'error');
+            }
+        }
+
+        // File Upload
+        function setupDragDrop() {
+            const uploadZone = document.getElementById('uploadZone');
+            
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                uploadZone.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                uploadZone.addEventListener(eventName, () => {
+                    if (!state.isUploading) {
+                        uploadZone.classList.add('dragover');
+                    }
+                }, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                uploadZone.addEventListener(eventName, () => {
+                    uploadZone.classList.remove('dragover');
+                }, false);
+            });
+            
+            uploadZone.addEventListener('drop', (e) => {
+                if (!state.isUploading) {
+                    const files = e.dataTransfer.files;
+                    handleFiles(files);
+                }
+            }, false);
+            
+            uploadZone.addEventListener('click', () => {
+                if (!state.isUploading) {
+                    document.getElementById('fileInput').click();
+                }
+            });
+        }
+
+        function handleFileSelect(event) {
+            const files = event.target.files;
+            handleFiles(files);
+            event.target.value = ''; // Reset input
+        }
+
+        async function handleFiles(files) {
+            if (files.length === 0) return;
+            
+            state.isUploading = true;
+            document.getElementById('progressContainer').classList.add('active');
+            
+            for (let i = 0; i < files.length; i++) {
+                await uploadFile(files[i], i + 1, files.length);
+            }
+            
+            state.isUploading = false;
+            document.getElementById('progressContainer').classList.remove('active');
+            await loadFolderContents(state.currentFolderId);
+            showToast(`Uploaded ${files.length} file(s) successfully!`, 'success');
+        }
+
+        async function uploadFile(file, currentIndex, totalFiles) {
+            const startTime = Date.now();
+            let lastLoaded = 0;
+            let lastTime = startTime;
+            
+            try {
+                const boundary = '-------314159265358979323846';
+                const delimiter = "\r\n--" + boundary + "\r\n";
+                const close_delim = "\r\n--" + boundary + "--";
+                
+                const metadata = {
+                    name: file.name,
+                    mimeType: file.type || 'application/octet-stream',
+                    parents: [state.currentFolderId]
+                };
+                
+                const reader = new FileReader();
+                
+                return new Promise((resolve, reject) => {
+                    reader.onload = async (e) => {
+                        const base64Data = e.target.result.split(',')[1];
+                        
+                        const requestBody = delimiter +
+                            'Content-Type: application/json\r\n\r\n' +
+                            JSON.stringify(metadata) +
+                            delimiter +
+                            'Content-Type: ' + file.type + '\r\n' +
+                            'Content-Transfer-Encoding: base64\r\n\r\n' +
+                            base64Data +
+                            close_delim;
+                        
+                        try {
+                            const xhr = new XMLHttpRequest();
+                            
+                            xhr.upload.addEventListener('progress', (event) => {
+                                if (event.lengthComputable) {
+                                    const loaded = event.loaded;
+                                    const currentTime = Date.now();
+                                    const timeDiff = (currentTime - lastTime) / 1000;
+                                    
+                                    if (timeDiff >= 0.5) {
+                                        const speed = (loaded - lastLoaded) / timeDiff;
+                                        const speedDisplay = formatSpeed(speed);
+                                        
+                                        document.getElementById('uploadSpeed').textContent = speedDisplay;
+                                        document.getElementById('speedDisplay').textContent = speedDisplay;
+                                        
+                                        lastLoaded = loaded;
+                                        lastTime = currentTime;
+                                    }
+                                    
+                                    const percent = Math.round((loaded / event.total) * 100);
+                                    const overallPercent = Math.round(((currentIndex - 1) + (percent / 100)) / totalFiles * 100);
+                                    
+                                    document.getElementById('progressFill').style.width = percent + '%';
+                                    document.getElementById('progressPercent').textContent = percent + '%';
+                                    document.getElementById('progressText').textContent = 
+                                        `Uploading ${file.name} (${currentIndex}/${totalFiles})`;
+                                    document.getElementById('uploadProgress').textContent = overallPercent + '%';
+                                }
+                            });
+                            
+                            xhr.addEventListener('load', () => {
+                                if (xhr.status >= 200 && xhr.status < 300) {
+                                    resolve();
+                                } else {
+                                    reject(new Error(`Upload failed: ${xhr.statusText}`));
+                                }
+                            });
+                            
+                            xhr.addEventListener('error', () => {
+                                reject(new Error('Network error during upload'));
+                            });
+                            
+                            xhr.open('POST', 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart');
+                            xhr.setRequestHeader('Authorization', `Bearer ${state.accessToken}`);
+                            xhr.setRequestHeader('X-Goog-Api-Key', CONFIG.API_KEY);
+                            xhr.setRequestHeader('Content-Type', 'multipart/related; boundary="' + boundary + '"');
+                            
+                            xhr.send(requestBody);
+                            
+                        } catch (error) {
+                            reject(error);
+                        }
+                    };
+                    
+                    reader.onerror = () => reject(new Error('Failed to read file'));
+                    reader.readAsDataURL(file);
+                });
+                
+            } catch (error) {
+                console.error('Upload error:', error);
+                showToast(`Failed to upload ${file.name}: ${error.message}`, 'error');
+                throw error;
+            }
+        }
+
+        function formatSpeed(bytesPerSecond) {
+            if (bytesPerSecond < 1024) return bytesPerSecond.toFixed(0) + ' B/s';
+            if (bytesPerSecond < 1024 * 1024) return (bytesPerSecond / 1024).toFixed(1) + ' KB/s';
+            return (bytesPerSecond / (1024 * 1024)).toFixed(2) + ' MB/s';
+        }
+
+        // File Download
+        async function downloadFile(fileId, fileName) {
+            try {
+                showToast('Preparing download...', 'info');
+                
+                const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+                    headers: {
+                        'Authorization': `Bearer ${state.accessToken}`,
+                        'X-Goog-Api-Key': CONFIG.API_KEY
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Download failed');
+                }
+                
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                showToast('Download started!', 'success');
+                
+            } catch (error) {
+                console.error('Download error:', error);
+                showToast(error.message, 'error');
+            }
+        }
+
+        // Network Status
+        function checkNetworkStatus() {
+            const networkStatus = document.getElementById('networkStatus');
+            
+            function updateStatus() {
+                if (navigator.onLine) {
+                    networkStatus.textContent = 'Online';
+                    networkStatus.parentElement.style.background = 'rgba(52, 168, 83, 0.2)';
+                } else {
+                    networkStatus.textContent = 'Offline';
+                    networkStatus.parentElement.style.background = 'rgba(234, 67, 53, 0.2)';
+                }
+            }
+            
+            window.addEventListener('online', updateStatus);
+            window.addEventListener('offline', updateStatus);
+            updateStatus();
+        }
+
+        // Toast Notifications
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast active ' + type;
+            
+            setTimeout(() => {
+                toast.classList.remove('active');
+            }, 3000);
+        }
+
+        // PWA Installation
+        function setupServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                // Register a minimal service worker for offline support
+                const swCode = `
+                    const CACHE_NAME = 'drive-manager-v1';
+                    
+                    self.addEventListener('install', (event) => {
+                        event.waitUntil(
+                            caches.open(CACHE_NAME).then((cache) => {
+                                return cache.addAll(['./']);
+                            })
+                        );
+                    });
+                    
+                    self.addEventListener('fetch', (event) => {
+                        event.respondWith(
+                            caches.match(event.request).then((response) => {
+                                return response || fetch(event.request);
+                            })
+                        );
+                    });
+                `;
+                
+                const blob = new Blob([swCode], { type: 'application/javascript' });
+                const swUrl = URL.createObjectURL(blob);
+                
+                navigator.serviceWorker.register(swUrl)
+                    .then(() => console.log('Service Worker registered'))
+                    .catch(err => console.error('SW registration failed:', err));
+            }
+            
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                state.deferredPrompt = e;
+                document.getElementById('installBtn').style.display = 'inline-flex';
+            });
+        }
+
+        async function installPWA() {
+            if (state.deferredPrompt) {
+                state.deferredPrompt.prompt();
+                const { outcome } = await state.deferredPrompt.userChoice;
+                console.log(`User response to install prompt: ${outcome}`);
+                state.deferredPrompt = null;
+                document.getElementById('installBtn').style.display = 'none';
+            }
+        }
+
+        // Close modals on outside click
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.remove('active');
+                }
+            });
+        });
+
+        // Handle auth callback
+        window.addEventListener('load', () => {
+            if (window.location.hash && window.location.hash.includes('access_token')) {
+                handleAuth();
+            }
+        });
+    </script>
+</body>
+</html>
